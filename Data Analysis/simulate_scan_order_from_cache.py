@@ -37,11 +37,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from methods import (
-    billiard_knot,       # (t,p,q) with reflection
-    compute_time_steps,  # exact center-hit schedule
-)
-
 # ---------------- I/O ----------------
 def _load_df(path: Path) -> pd.DataFrame:
     if path.suffix.lower() in (".parquet", ".pq"):
@@ -158,7 +153,37 @@ def order_spiral(coords_sorted, start_rc=None, clockwise=True):
     order = [(rmin+r, cmin+c) for (r,c) in dense if present[r][c]]
     return _rotate_to_start(order, start_rc)
 
-# ---------------- billiard via methods.py ----------------
+# ---------------- billiard knot----------------
+def billiard_knot(t, p, q):
+    """Generate billiard knot coordinates."""
+    x = (p * t) % 2
+    y = (q * t) % 2
+    # Reflect coordinates
+    x = 2 - x if x > 1 else x
+    y = 2 - y if y > 1 else y
+    return x, y
+
+def lcm(a, b):
+    """Compute least common multiple of two integers."""
+    return abs(a * b) // math.gcd(a, b)
+
+
+def compute_time_steps(num_tiles_x, num_tiles_y, p, q):
+    """
+    Compute exact time steps to align billiard knot trajectory with every tile center.
+    """
+    total_steps = lcm(2 * num_tiles_x, 2 * num_tiles_y)
+    centers_x = (np.arange(num_tiles_x) + 0.5) / num_tiles_x
+    centers_y = (np.arange(num_tiles_y) + 0.5) / num_tiles_y
+    time_steps = []
+    print('Computing time steps!')
+    for t in range(total_steps):
+        t_norm = t / total_steps
+        x, y = billiard_knot(t_norm, p, q)
+        if any(abs(x - centers_x) < 1e-6) and any(abs(y - centers_y) < 1e-6):
+            time_steps.append(t_norm)
+    return np.unique(np.sort(time_steps))
+
 def order_billiard_methods(coords_sorted: list[tuple[int,int]],
                            p: int, q: int,
                            start_rc: tuple[int,int] | None) -> list[tuple[int,int]]:
@@ -488,3 +513,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
