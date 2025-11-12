@@ -1244,9 +1244,6 @@ def preflight_analysis(files: list[Path], base_dir: Path, sample_pairs=30, auto_
         f.write(f"SHEAR_CAP         = {shear_cap:.2e}\n")
     print(f"[preflight] Report written to {report_path}")
 
-    # --- Diagnostic plots (unchanged)
-    # [plots here as before...]
-
     # --- Auto-apply if requested
     if auto_apply:
         globals()["OVERLAP_FRAC"]     = overlap_frac
@@ -1578,4 +1575,5 @@ if __name__ == "__main__":
         if args.auto:
             stitch(bcf_files, directory)  # runs with adjusted globals
     else:
+
         stitch(bcf_files, directory)
