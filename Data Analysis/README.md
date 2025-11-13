@@ -153,7 +153,7 @@ install.packages(c("jsonlite","dplyr","tidyr","ggplot2","readr","purrr","tibble"
 
 ## Troubleshooting
 
-- Common BCF-related causes include missing or corrupted stage metadata, inconsistent units/signs for X–Y, duplicated or out-of-order tiles, unreadable/cropped files, or ESprit/format-version quirks (e.g., energy-axis mismatches in EDS blocks).
 - **“Could not merge order with cache …”** → check that your order CSV has either `row,col` or `filename/path` columns matching the cache.  
 - **Empty composition series** → verify `weight` and element columns in the cache are numeric and non‑zero.  
-- **R figure looks clipped** → adjust `X_MAX`, `Y_MAX`, and `HIST_MAX_FRAC`.  
+- **R figure looks clipped** → adjust `X_MAX`, `Y_MAX`, and `HIST_MAX_FRAC`.
+- Common BCF-related causes include missing or corrupted stage metadata, inconsistent units/signs for X–Y, duplicated or out-of-order tiles, unreadable/cropped files, or ESprit/format-version quirks (e.g., energy-axis mismatches in EDS blocks).
