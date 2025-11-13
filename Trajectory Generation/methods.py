@@ -9,6 +9,15 @@ from tqdm import tqdm
 from scipy.stats import entropy
 from collections import Counter
 
+def _flip_x_index(ix: int, nx: int) -> int:
+    """Flip a tile index ix to use a top-right origin over nx tiles."""
+    return nx - 1 - ix
+
+def _flip_x_pixels(xpx: int, width_px: int) -> int:
+    """Flip a pixel x-position to use a top-right origin over width_px pixels."""
+    return width_px - 1 - xpx
+
+
 def adjust_canvas_size(canvas, num_tiles_x, num_tiles_y):
     """
     Adjust canvas size to ensure it is perfectly divisible by the grid dimensions.
@@ -296,8 +305,9 @@ def place_tiles(input, tile_width, tile_height, num_tiles_x, num_tiles_y, p, q, 
             continue  # ignore times beyond limit
 
         x, y = billiard_knot(t, p, q)
-        grid_x = int(x * num_tiles_x)
-        grid_y = int(y * num_tiles_y)
+        raw_x = int(x * num_tiles_x)
+        grid_x = _flip_x_index(raw_x, num_tiles_x)  # top-right origin
+        grid_y = int(y * num_tiles_y)  # top is still origin in Y
 
         if not grid_coverage[grid_y, grid_x]:
             y_min, y_max = grid_y * tile_height, (grid_y + 1) * tile_height
@@ -381,8 +391,10 @@ def draw_full_path(canvas, p, q, num_tiles_x, num_tiles_y, tile_width, tile_heig
     for t in range(time_steps):
         t = t / time_steps
         x, y = billiard_knot(t, p, q)
-        grid_x = int(x * num_tiles_x * tile_width)
-        grid_y = int(y * num_tiles_y * tile_height)
+        x_px = int(x * num_tiles_x * tile_width)
+        y_px = int(y * num_tiles_y * tile_height)
+        grid_x = _flip_x_pixels(x_px, num_tiles_x * tile_width)  # top-right origin
+        grid_y = y_px
         canvas[grid_y - 1:grid_y + 1, grid_x - 1:grid_x + 1] = 255
 
 
@@ -452,5 +464,3 @@ def similarity(v1, v2):
     """
     cosine_sim = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
     return cosine_sim
-
-
