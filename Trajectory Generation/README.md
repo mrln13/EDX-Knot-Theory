@@ -107,7 +107,7 @@ Coordinates are in **µm**, ordered by the billiard sequence (tile centers). The
   `compute_time_steps(...)` computes exact normalized times `t ∈ [0,1]` when the path crosses tile centers. These define the acquisition order.
 
 - **Color encoding & origin**  
-  Tile color encodes **normalized time** (0–1). The origin is **top-left**.
+  Tile color encodes **normalized time** (0–1). The origin is **top-right**. 
 
 ---
 
@@ -177,6 +177,6 @@ visualize(canvas, sm, tile_w, tile_h, p, q)
 ## Reproducibility
 
 - Save the exact command lines and the generated file names (they embed `{p,q}`, sizes, and limits).
-- Keep `positions.ini`, the PNG/TIFF outputs, and your input TIFFs under version control for traceability.
+- Keep `positions.ini`, the PNG/TIFF outputs, and input TIFFs under version control for traceability.
 
 ---
