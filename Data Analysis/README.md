@@ -142,7 +142,7 @@ install.packages(c("jsonlite","dplyr","tidyr","ggplot2","readr","purrr","tibble"
 
 ---
 
-## Repro Tips & Conventions
+## Conventions
 
 - Paths in outputs are **relative** by default where feasible (see `--rewrite-relative-to` and `--absolute` in simulators).  
 - Stage coordinates follow the SEM convention used in these scripts (origin top‑right; X leftward; Y downward) when deriving grids from BCF metadata.  
