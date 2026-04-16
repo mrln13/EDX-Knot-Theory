@@ -1,3 +1,21 @@
+"""BSE mosaic stitching pipeline with optional EDS preview generation.
+
+End-to-end workflow:
+  1. Read BCF tiles and extract stage coordinates + pixel sizes.
+  2. Quantise stage positions into an integer lattice.
+  3. Measure pairwise shifts via phase cross-correlation (multi-scale).
+  4. Solve for global tile positions using constrained least-squares.
+  5. Composite the mosaic with sub-pixel shift, per-tile shear correction,
+     and Tukey feathering for smooth blending.
+  6. Optionally generate downsampled per-element EDS preview maps.
+
+The main entry point is the ``stitch()`` function.  Tunable parameters
+are grouped into presets (A/B/C) near the top of the file.
+
+This module also exports ``build_grid_from_stage_quantized()`` which is
+used by build_composition_cache.py to derive (row, col) indices.
+"""
+
 import numpy as np
 import hyperspy.api as hs
 from pathlib import Path

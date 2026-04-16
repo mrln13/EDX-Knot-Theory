@@ -45,8 +45,8 @@ python ScanPatterns.py   --blank-w 2000 --blank-h 1200   --min-tile 50 --max-til
 ```
 
 **Outputs (current folder):**
-- `blank_p{p}_q{q}_{W}x{H}_tsmin{min}_tsmax{max}_input.tif` — cropped canvas
-- `blank_p{p}_q{q}_..._canvas.tif` — colored visitation map (color = normalized time 0→1)
+- `blank_p{p}_q{q}_{W}x{H}_tile{tw}x{th}_input.tif` — cropped canvas
+- `blank_p{p}_q{q}_{W}x{H}_tile{tw}x{th}_canvas.tif` — colored visitation map (color = normalized time 0→1)
 - `pattern.png` — optional figure with title & colorbar
 
 ### B) Run on an existing RGB TIFF
@@ -68,7 +68,7 @@ min_tile_size, max_tile_size = 768, 1024
 p, q = 45, 64
 pixel_size = 430  # nm per pixel
 
-# Stage origin in µm (top-left reference)
+# Stage origin in µm (top-right reference)
 initial_x = 48000
 initial_y = 52000
 z = 36357
@@ -142,11 +142,11 @@ Coordinates are in **µm**, ordered by the billiard sequence (tile centers). The
 ## API highlights (`methods.py`)
 
 ```python
-find_valid_tile_size(canvas_shape, min_tile, max_tile, p0, q0, maximize_reflections=True)
+find_valid_tile_size(canvas_shape, min_tile_size, max_tile_size, initial_p, initial_q, maximize_reflections=True)
 compute_time_steps(num_tiles_x, num_tiles_y, p, q)
 billiard_knot(t, p, q)
-place_tiles(canvas, tile_w, tile_h, nx, ny, p, q, t_vals, ...)
-visualize(canvas, sm, tile_w, tile_h, p, q)
+place_tiles(input, tile_width, tile_height, num_tiles_x, num_tiles_y, p, q, t_vals, ...)
+visualize(canvas, sm, tile_width, tile_height, p, q)
 ```
 
 - `place_tiles(...)` returns `[canvas, (optional overlay_if_data)]` and a `ScalarMappable` for colorbars.

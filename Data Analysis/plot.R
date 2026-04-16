@@ -18,6 +18,9 @@ GROUP_B_FILES <- c(
   "path/to/dataset2c.RData"
 )
 
+GROUP_A_LABEL <- "C23-T2-1A"
+GROUP_B_LABEL <- "C23-S1-A"
+
 SAVE_FIGURE <- TRUE
 OUT_NAME    <- "BigBeautifulFigure.pdf"
 
@@ -87,8 +90,8 @@ summ_plot <- summ_all %>%
   summarise(
     min_v = min(min_v, na.rm = TRUE),
     max_v = max(max_v, na.rm = TRUE),
-    p10   = min(p10,   na.rm = TRUE),
-    p90   = max(p90,   na.rm = TRUE),
+    p10   = median(p10, na.rm = TRUE),
+    p90   = median(p90, na.rm = TRUE),
     med   = median(med, na.rm = TRUE),
     .groups = "drop"
   ) %>%
@@ -146,9 +149,8 @@ stats_lines <- conv_plot %>%
     .groups = "drop"
   ) %>%
   mutate(
-    mu     = pmin(pmax(mu, 0), X_MAX),
-    mu_m1s = pmin(pmax(mu - sd, 0), X_MAX),
-    mu_p1s = pmin(pmax(mu + sd, 0), X_MAX)
+    mu_m1s = mu - sd,
+    mu_p1s = mu + sd
   )
 
 # -------- function to build a single row plot with its own secondary axis --------
@@ -205,7 +207,7 @@ make_row_plot <- function(slot_value, hist_rects, sec_axis_scale) {
       axis.title.x      = element_text(margin = margin(t = 6))
     ) +
     facet_grid(cols = vars(group),
-               labeller = labeller(group = as_labeller(c(A = "C23-T2-1A", B = "C23-S1-A"))))
+               labeller = labeller(group = as_labeller(c(A = GROUP_A_LABEL, B = GROUP_B_LABEL))))
 }
 
 # Build the three row plots (top & middle share axis scale; bottom has its own)

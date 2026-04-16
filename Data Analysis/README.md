@@ -61,6 +61,7 @@ python simulate_scan_order_from_cache.py \
   --out-template "orders/{pattern}_edge_r{r}_c{c}.csv" \
   --preview-template "orders/preview_{pattern}_edge_r{r}_c{c}.png"
 ```
+**Tip:** Instead of `--cache`, you can use `--index` with any CSV or Parquet that has `row`, `col`, and `path` columns (no composition data needed — only the grid layout is used).
 
 ### 3) Aggregate composition across many orders (Python → JSON)
 ```bash

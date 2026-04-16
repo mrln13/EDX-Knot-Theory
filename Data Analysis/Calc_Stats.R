@@ -42,12 +42,17 @@ suppressPackageStartupMessages({
 })
 
 # -------- helpers --------
+
+# Closure: clamp negatives to 0, normalise to sum-to-1.
+# Returns a uniform vector if the sum is zero or non-finite.
 closure_vec <- function(x) {
   x <- as.numeric(pmax(0, x))
   s <- sum(x)
   if (!is.finite(s) || s <= 0) rep(1/length(x), length(x)) else x / s
 }
 
+# Centred log-ratio transform.  Zeros are replaced with eps=1e-12 before
+# taking logs to avoid -Inf.
 clr_vec <- function(p) {
   eps <- 1e-12
   p <- pmax(eps, p)
@@ -55,6 +60,9 @@ clr_vec <- function(p) {
   log(p / gm)
 }
 
+# Exponentially weighted moving average in CLR space.
+# Returns list(d, Z) where d[t] is the Euclidean distance between
+# the new observation Y[t,] and the previous EWMA state Z[t-1,].
 ewma_clr <- function(Y, lambda) {
   Tn <- nrow(Y); D <- ncol(Y)
   Z  <- matrix(NA_real_, Tn, D)
@@ -70,11 +78,16 @@ ewma_clr <- function(Y, lambda) {
   list(d = d, Z = Z)
 }
 
+# Dynamic window size: starts at w_min and grows exponentially by alpha
+# every w_min steps, capped at w_max.
 dyn_window_size <- function(t, w_min, w_max, alpha) {
   w <- floor(w_min * (alpha ^ floor(t / w_min)))
   min(w, w_max)
 }
 
+# Evaluate whether the rolling window [t-w+1 .. t] of distances d passes
+# all three convergence criteria: median < thr_med, P90-P10 spread < thr_spread,
+# and |linear slope| < thr_slope.
 roll_stats_ok <- function(d, t, w, thr_med, thr_spread, thr_slope) {
   # guard: enough history?
   if (t < 2 || t - w + 1 < 1) return(FALSE)
@@ -97,6 +110,8 @@ roll_stats_ok <- function(d, t, w, thr_med, thr_spread, thr_slope) {
   (med < thr_med) && (spr < thr_spread) && (abs(sl) < thr_slope)
 }
 
+# Find the starting index of the first run of TRUE values with length >= run_len.
+# Returns NA_integer_ if no such run exists.
 first_run_of_true <- function(x, run_len) {
   if (length(x) == 0) return(NA_integer_)
   r <- rle(x)
@@ -112,6 +127,8 @@ file_stem <- function(path_or_name) {
   sub("\\.[^.]*$", "", b)
 }
 
+# Convert a list of named composition vectors (from JSON) into a closed
+# numeric matrix (rows = steps, cols = elements, each row sums to 1).
 comp_list_to_matrix <- function(comp_list) {
   elem_union <- sort(unique(unlist(lapply(comp_list, names))))
   if (!length(elem_union)) return(NULL)
@@ -134,6 +151,9 @@ comp_list_to_matrix <- function(comp_list) {
 }
 cat("\nCreated helpers\n")
 # -------- per-run processor → returns per-step distances + conv step --------
+# Main per-run pipeline: composition matrix → select majors + "Other" →
+# re-closure → CLR transform → EWMA smoothing → rolling-window convergence
+# detection.  Returns a tibble with columns (file, step, dist, ok, conv_step).
 process_run <- function(run_obj) {
   if (is.null(run_obj$file) || is.null(run_obj$composition)) return(NULL)
   stem <- file_stem(as.character(run_obj$file))
@@ -170,11 +190,11 @@ process_run <- function(run_obj) {
   base_window <- min(w_min, length(d))
   d0 <- d[seq_len(base_window)]
   d0 <- d0[is.finite(d0)]
-  if (!length(d0)) d0 <- 0
-  
-  base_med    <- median(d0, na.rm = TRUE)
-  base_spread <- as.numeric(quantile(d0, 0.9, na.rm = TRUE) -
-                              quantile(d0, 0.1, na.rm = TRUE))
+
+  base_med    <- if (length(d0)) median(d0) else 0
+  base_spread <- if (length(d0) >= 2)
+    as.numeric(quantile(d0, 0.9, names = FALSE) - quantile(d0, 0.1, names = FALSE))
+  else 0
   theta_med    <- max(theta_med_base,    0.5 * base_med)
   theta_spread <- max(theta_spread_base, 0.5 * base_spread)
   theta_slope  <- theta_slope_base

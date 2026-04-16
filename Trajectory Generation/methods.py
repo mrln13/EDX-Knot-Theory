@@ -1,3 +1,18 @@
+"""
+Core library for billiard-knot trajectory generation and tile placement.
+
+Coordinate convention
+---------------------
+The visualisation canvas uses a standard image layout (origin top-left,
+X right, Y down).  To match the SEM stage convention (origin top-right,
+X leftward), all rendering functions flip the X axis at the **tile-index**
+level via ``_flip_x_index``.  Both ``place_tiles`` and ``draw_full_path``
+share this flip so that painted tiles and the overlaid path are aligned.
+
+Note: ``PosCalc.py`` does NOT flip grid_x because the microscope control
+software (Bruker ESPRIT) already uses a top-right origin natively.
+"""
+
 import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,8 +34,9 @@ def _flip_x_pixels(xpx: int, width_px: int) -> int:
 
 
 def adjust_canvas_size(canvas, num_tiles_x, num_tiles_y):
-    """
-    Adjust canvas size to ensure it is perfectly divisible by the grid dimensions.
+    """Crop *canvas* so its dimensions are exactly divisible by the tile grid.
+
+    Returns (cropped_canvas, tile_width, tile_height).
     """
     tile_width = canvas.shape[1] // num_tiles_x
     tile_height = canvas.shape[0] // num_tiles_y
@@ -31,7 +47,17 @@ def adjust_canvas_size(canvas, num_tiles_x, num_tiles_y):
 
 
 def find_valid_tile_size(canvas_shape, min_tile_size, max_tile_size, initial_p, initial_q, maximize_reflections=True):
-    """Find a valid tile size and grid configuration."""
+    """Search for a (p, q) pair and tile size that give full coverage.
+
+    Iterates over (p, q) near (initial_p, initial_q) and checks whether the
+    resulting grid fits within [min_tile_size, max_tile_size].  When
+    *maximize_reflections* is True, higher (p, q) are tried first, yielding
+    smaller tiles and a denser billiard path.
+
+    Returns (tile_width, tile_height, num_tiles_x, num_tiles_y, p, q).
+
+    Raises ValueError if no valid configuration is found.
+    """
     height, width = canvas_shape
 
     # Maximizing reflections (high p and q) will tend to smaller tile sizes and less spread of the billiard curves
@@ -60,7 +86,12 @@ def find_valid_tile_size(canvas_shape, min_tile_size, max_tile_size, initial_p, 
 
 
 def billiard_knot(t, p, q):
-    """Generate billiard knot coordinates."""
+    """Evaluate the billiard-knot trajectory at normalised time *t*.
+
+    Returns (x, y) in [0, 1] x [0, 1].  The path is parameterised on [0, 2)
+    with reflections at the unit-square boundaries; *p* and *q* control the
+    number of reflections along the x and y axes respectively.
+    """
     x = (p * t) % 2
     y = (q * t) % 2
     # Reflect coordinates
@@ -75,15 +106,10 @@ def lcm(a, b):
 
 
 def check_full_coverage(p, q, num_tiles_x, num_tiles_y):
-    """
-    :param p:
-    :param q:
-    :param num_tiles_x:
-    :param num_tiles_y:
-    :return:
-    Full coverage is possible when gcd(p,q) > 1, but only if num_tiles_x and num_tiles_y are divisible by gcd(p,q).
-    So the interaction between the canvas dimensions and p and q determines whether the trajectory can reach all tile centers.
-    This function guarantees p, q combinations that do so, given a number of tiles in the x and y direction.
+    """Return True if the (p, q) billiard visits every tile centre exactly once.
+
+    Full coverage requires that both num_tiles_x and num_tiles_y are divisible
+    by gcd(p, q).
     """
     gcd_pq = math.gcd(p, q)
     if num_tiles_x % gcd_pq == 0 and num_tiles_y % gcd_pq == 0:
@@ -93,8 +119,9 @@ def check_full_coverage(p, q, num_tiles_x, num_tiles_y):
 
 
 def compute_time_steps(num_tiles_x, num_tiles_y, p, q):
-    """
-    Compute exact time steps to align billiard knot trajectory with every tile center.
+    """Compute normalised times at which the billiard path crosses tile centres.
+
+    Returns a sorted array of unique t values in [0, 1).
     """
     total_steps = lcm(2 * num_tiles_x, 2 * num_tiles_y)
     centers_x = (np.arange(num_tiles_x) + 0.5) / num_tiles_x
@@ -133,14 +160,16 @@ def update_global_metrics(key_vect, global_metrics):
 
 
 def plot_convergence(global_metrics, min_window_size=5, max_window_size=200, roc_threshold=0.001):
-    """
-    Plot global convergence metrics over time.
+    """Plot demo convergence metrics (variance and entropy rate-of-change).
 
-    Args:
-        global_metrics: Dictionary with keys 'variance' and 'entropy'.
+    This is a diagnostic visualisation for the demo convergence helpers and
+    is NOT the EWMA-CLR metric used in the manuscript (see Calc_Stats.R).
     """
 
     steps = len(global_metrics['variance'])
+    if steps < 2:
+        print("Not enough data points to plot convergence.")
+        return
     x = np.arange(steps)
 
     # Compute rates of change for variance and entropy
@@ -268,7 +297,19 @@ def place_tiles(input, tile_width, tile_height, num_tiles_x, num_tiles_y, p, q, 
                 mark_center=False, limit=1.0, overlay=True, min_window_size=5, max_window_size=100,
                 rate_of_change_threshold=0.001, min_tiles=50, stop_at_convergence=False):
     """
-    Place tiles on the canvas based on the billiard knot trajectory. Limit is fraction of canvas to cover.
+    Place tiles on the canvas following the billiard knot trajectory.
+
+    Tile indices are X-flipped (via _flip_x_index) so the canvas displays
+    with the SEM top-right origin convention.  Pixel coordinates for slicing
+    are derived from the flipped tile index, consistent with draw_full_path.
+
+    Parameters
+    ----------
+    limit : float
+        Fraction of the normalised time range [0, 1] to include.
+    data : bool
+        If True, treat *input* as a segmented phase map and track
+        composition convergence (demo variance/entropy, not EWMA-CLR).
     """
 
     grid_coverage = np.zeros((num_tiles_y, num_tiles_x), dtype=bool)
@@ -306,12 +347,14 @@ def place_tiles(input, tile_width, tile_height, num_tiles_x, num_tiles_y, p, q, 
 
         x, y = billiard_knot(t, p, q)
         raw_x = int(x * num_tiles_x)
-        grid_x = _flip_x_index(raw_x, num_tiles_x)  # top-right origin
-        grid_y = int(y * num_tiles_y)  # top is still origin in Y
+        grid_x = _flip_x_index(raw_x, num_tiles_x)  # top-right origin for tracking
+        grid_y = int(y * num_tiles_y)
 
         if not grid_coverage[grid_y, grid_x]:
             y_min, y_max = grid_y * tile_height, (grid_y + 1) * tile_height
-            x_min, x_max = grid_x * tile_width, (grid_x + 1) * tile_width
+            # Pixel coords: flip at tile-index level, consistent with draw_full_path
+            x_min = grid_x * tile_width
+            x_max = x_min + tile_width
 
             if data:
                 # tile composition & cumulative vector
@@ -388,20 +431,27 @@ def place_tiles(input, tile_width, tile_height, num_tiles_x, num_tiles_y, p, q, 
 
 
 def draw_full_path(canvas, p, q, num_tiles_x, num_tiles_y, tile_width, tile_height, time_steps=100000):
-    for t in range(time_steps):
-        t = t / time_steps
-        x, y = billiard_knot(t, p, q)
-        x_px = int(x * num_tiles_x * tile_width)
-        y_px = int(y * num_tiles_y * tile_height)
-        grid_x = _flip_x_pixels(x_px, num_tiles_x * tile_width)  # top-right origin
-        grid_y = y_px
-        canvas[grid_y - 1:grid_y + 1, grid_x - 1:grid_x + 1] = 255
+    """Overlay the continuous billiard path onto *canvas*.
+
+    X is flipped at the tile-index level (via _flip_x_index), matching the
+    convention used by place_tiles so tiles and path are aligned.
+    """
+    canvas_w = num_tiles_x * tile_width
+    canvas_h = num_tiles_y * tile_height
+    for t_i in range(time_steps):
+        t_norm = t_i / time_steps
+        x, y = billiard_knot(t_norm, p, q)
+        # Flip x via tile index, then compute pixel position within that tile
+        raw_x = x * num_tiles_x
+        tile_ix = _flip_x_index(int(raw_x), num_tiles_x)
+        frac_x = raw_x - int(raw_x)  # fractional position within the tile
+        px = min(int((tile_ix + frac_x) * tile_width), canvas_w - 1)
+        py = min(int(y * canvas_h), canvas_h - 1)
+        canvas[max(0, py - 1):py + 1, max(0, px - 1):px + 1] = 255
 
 
 def visualize(canvas, sm, tile_width, tile_height, p, q):
-    """
-    Visualize the canvas with tiles and tile centers.
-    """
+    """Show the canvas on-screen with a normalised-time colorbar."""
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.imshow(canvas, interpolation='none', origin='upper')
     ax.axis('off')
@@ -411,14 +461,13 @@ def visualize(canvas, sm, tile_width, tile_height, p, q):
     plt.show()
 
 
-# Deconstruct 2D array into unique RGB combinations and their frequency
 def composition(eds_map):
-    """
-       Efficiently compute unique classes and their counts in an RGB segmented phase map.
+    """Extract unique RGB classes and their pixel counts from a segmented phase map.
 
-       :param eds_map: RGB segmented phase map (3D numpy array of shape (H, W, 3)).
-       :return: unique classes (RGB values) and their counts.
-       """
+    Uses uint32 hashing for efficient unique-detection.
+
+    Returns (unique_classes, counts) where unique_classes has shape (N, 3).
+    """
     # Promote to uint32 to prevent overflow
     eds_map = eds_map.astype(np.uint32)
     # Encode RGB values into single integers
@@ -437,30 +486,28 @@ def composition(eds_map):
     return unique_classes, counts
 
 
-# Populate dictionary. Key: tuple with unique RGB values, value: count
 def populate_dict(dict, tile):
-    """
-    Keeps track of measured composition by adding tile compositions
-    :param dict:
-    :param tile:
-    :return: normalized composition
+    """Update *dict* with (RGB-tuple -> count) entries from *tile* and return
+    the normalised composition vector.
+
+    *tile* is the (unique_classes, counts) tuple returned by composition().
+    Returns a uniform vector if all counts are zero.
     """
     for i in range(len(tile[0])):
         dict[tuple(tile[0][i])] = tile[1][i]
     vector = []
     for val in dict.values():
         vector.append(val)
-    vector = np.asarray(vector)
-    vector = vector / sum(vector)
-    return vector
+    vector = np.asarray(vector, dtype=float)
+    total = vector.sum()
+    if total == 0:
+        return np.ones_like(vector) / len(vector) if len(vector) else vector
+    return vector / total
 
 
 def similarity(v1, v2):
-    """
-    Calculate cosine similarity between vectors
-    :param v1: vector 1
-    :param v2: vector 2
-    :return: cosine similarity (float)
-    """
-    cosine_sim = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-    return cosine_sim
+    """Return the cosine similarity between two vectors (0.0 if either is zero)."""
+    denom = np.linalg.norm(v1) * np.linalg.norm(v2)
+    if denom == 0:
+        return 0.0
+    return np.dot(v1, v2) / denom

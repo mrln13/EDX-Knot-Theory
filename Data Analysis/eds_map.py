@@ -1,4 +1,14 @@
-# eds_map.py
+"""EDS tile manifest and aligned element-map assembly.
+
+Provides utilities to:
+  - Discover EDS signals in BCF files and write a tile manifest CSV.
+  - Assemble aligned EDS cubes or per-element 2D maps from a stitch
+    manifest, with sub-pixel alignment, per-tile shear correction,
+    Tukey feathering, and optional sideband background subtraction.
+
+This module is a helper used by stitch.py and downstream ROI-based
+analysis — it is not part of the core convergence pipeline.
+"""
 from __future__ import annotations
 import csv
 from pathlib import Path

@@ -6,7 +6,7 @@ Batch-analyze cumulative (semi-quant) composition over MANY simulated scan order
 WITHOUT re-reading BCFs. Writes ONE aggregate JSON for all runs.
 
 Inputs:
-  --cache semiquant_cache.parquet         (from build_semiquant_cache.py; element columns are % per tile)
+  --cache composition_cache.parquet       (from build_composition_cache.py; element columns are % per tile)
   --orders "*.csv"  OR  --orders file1.csv file2.csv ...
   [optional] --base-dir <dir>             (prefer to read inputs here; write the aggregate here)
   [optional] --out  all_metrics.json      (single output JSON)
@@ -39,6 +39,7 @@ from tqdm import tqdm
 # ----------------------- Utilities -----------------------
 
 def resolve_input_path(arg_path: str, base_dir: str | None) -> Path:
+    """Resolve *arg_path* against *base_dir*, cwd, or as absolute.  Raises FileNotFoundError."""
     given = Path(arg_path)
     candidates = []
     if base_dir:
@@ -53,6 +54,7 @@ def resolve_input_path(arg_path: str, base_dir: str | None) -> Path:
     raise FileNotFoundError(str(given))
 
 def resolve_many_orders(order_args: List[str], base_dir: str | None) -> List[Path]:
+    """Expand a glob pattern or explicit file list into resolved CSV paths."""
     out: List[Path] = []
     if len(order_args) == 1 and any(ch in order_args[0] for ch in "*?[]"):
         # glob pattern
@@ -66,11 +68,17 @@ def resolve_many_orders(order_args: List[str], base_dir: str | None) -> List[Pat
     return out
 
 def _find_element_columns(df: pd.DataFrame) -> list[str]:
+    """Return sorted list of numeric columns that represent element concentrations."""
     fixed = {"path","row","col","stage_x","stage_y","weight","__valid","filename","acq_index"}
     cols = [c for c in df.columns if c not in fixed and pd.api.types.is_numeric_dtype(df[c])]
     return sorted(cols)
 
 def _merge_order_with_cache(order_df: pd.DataFrame, cache_df: pd.DataFrame) -> Tuple[pd.DataFrame, str]:
+    """Join an order CSV with the composition cache.
+
+    Tries matching on (row, col) first, falling back to filename.
+    Returns (merged_df, match_key_description).
+    """
     # Try (row, col)
     if {"row","col"}.issubset(order_df.columns) and {"row","col"}.issubset(cache_df.columns):
         oc = order_df.merge(cache_df, on=["row","col"], how="left", suffixes=("","_cache"))

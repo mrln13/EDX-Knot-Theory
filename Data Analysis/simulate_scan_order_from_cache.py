@@ -23,6 +23,7 @@ python simulate_scan_order_from_cache.py \
 
 from __future__ import annotations
 import argparse
+import math
 import re
 import os
 from pathlib import Path
@@ -44,6 +45,11 @@ def _load_df(path: Path) -> pd.DataFrame:
     return pd.read_csv(path)
 
 def load_grid(cache_or_index: Path, root: Path | None = None) -> tuple[list[tuple[int,int]], dict[tuple[int,int], str]]:
+    """Load a grid from a parquet/CSV cache or index file.
+
+    Returns (coords_sorted, rc_to_path) where coords_sorted is a sorted list
+    of (row, col) tuples and rc_to_path maps each to its file path.
+    """
     df = _load_df(cache_or_index)
     need = {"row", "col", "path"}
     if not need.issubset(df.columns):
@@ -111,6 +117,7 @@ def edge_starts(coords_sorted: List[Tuple[int,int]]) -> List[Tuple[int,int]]:
 
 # ----------- non-billiard patterns -----------
 def order_raster_row(coords_sorted, start_rc=None, snake=False):
+    """Row-major raster order, optionally with snake (boustrophedon) reversal."""
     R, C, rmin, cmin, present = _normalize_grid(coords_sorted)
     order = []
     for rr in range(R):
@@ -121,6 +128,7 @@ def order_raster_row(coords_sorted, start_rc=None, snake=False):
     return _rotate_to_start(order, start_rc)
 
 def order_raster_col(coords_sorted, start_rc=None, snake=False):
+    """Column-major raster order, optionally with snake reversal."""
     R, C, rmin, cmin, present = _normalize_grid(coords_sorted)
     order = []
     for cc in range(C):
@@ -131,6 +139,7 @@ def order_raster_col(coords_sorted, start_rc=None, snake=False):
     return _rotate_to_start(order, start_rc)
 
 def order_spiral(coords_sorted, start_rc=None, clockwise=True):
+    """Inward spiral order from the grid perimeter."""
     R, C, rmin, cmin, present = _normalize_grid(coords_sorted)
     top, left, bottom, right = 0, 0, R-1, C-1
     dense = []
@@ -153,9 +162,11 @@ def order_spiral(coords_sorted, start_rc=None, clockwise=True):
     order = [(rmin+r, cmin+c) for (r,c) in dense if present[r][c]]
     return _rotate_to_start(order, start_rc)
 
-# ---------------- billiard knot----------------
+# ---------------- billiard knot ----------------
+# NOTE: billiard_knot, lcm, and compute_time_steps are duplicated from
+# TrajectoryGeneration/methods.py to avoid a cross-directory import.
 def billiard_knot(t, p, q):
-    """Generate billiard knot coordinates."""
+    """Evaluate the billiard-knot trajectory at normalised time *t*.  See methods.py."""
     x = (p * t) % 2
     y = (q * t) % 2
     # Reflect coordinates
@@ -187,6 +198,12 @@ def compute_time_steps(num_tiles_x, num_tiles_y, p, q):
 def order_billiard_methods(coords_sorted: list[tuple[int,int]],
                            p: int, q: int,
                            start_rc: tuple[int,int] | None) -> list[tuple[int,int]]:
+    """Generate a billiard-knot scan order over the grid defined by *coords_sorted*.
+
+    Computes exact centre-hit times for (p, q) on a (C x R) grid, maps each
+    hit to a tile, and optionally rotates the sequence to start at *start_rc*.
+    Tiles not present in the grid (holes) are skipped.
+    """
     R, C, rmin, cmin, present = _normalize_grid(coords_sorted)
     filled = sum(sum(row) for row in present)
     if filled != R*C:
@@ -217,6 +234,11 @@ def build_scan_order(coords_sorted,
                      clockwise=True,
                      p: int = 38,
                      q: int = 53):
+    """Route to the appropriate scan-order generator based on *pattern*.
+
+    Supported patterns: raster, column, spiral, billiard (aliases accepted).
+    Returns a list of (row, col) tuples in acquisition order.
+    """
     start_rc = None
     if start:
         m = re.match(r"^\s*(-?\d+)\s*,\s*(-?\d+)\s*$", start)

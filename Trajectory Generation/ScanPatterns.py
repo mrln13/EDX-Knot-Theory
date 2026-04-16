@@ -40,6 +40,7 @@ def save_visualization_png(canvas, sm, tile_w, tile_h, p, q, out_path, fig_title
 
 
 def _ensure_rgb(img: np.ndarray) -> np.ndarray:
+    """Convert a 2-D grayscale image to 3-channel RGB by repeating."""
     if img.ndim == 2:
         return np.repeat(img[..., None], 3, axis=2)
     return img
@@ -154,7 +155,7 @@ def main():
     if args.fig_out:
         save_visualization_png(
             results[0], sm, tile_w, tile_h, p, q,
-            f"{stem}_p{p}_q{q}_{args.blank_w}x{args.blank_h}_tsmin{args.min_tile}_tsmax{args.max_tile}_legend.png",
+            args.fig_out,
             fig_title=args.fig_title,
             legend_label=args.legend_label or "Normalized Time Step",
         )
@@ -167,10 +168,10 @@ def main():
     # Save outputs
     # ------------------------------------------------------------
     out_dir = Path(".")
-    tifffile.imwrite(out_dir / f"{stem}_p{p}_q{q}_{args.blank_w}x{args.blank_h}_tsmin{args.min_tile}_tsmax{args.max_tile}_input.tif", cropped_map.astype("uint8"))
-    tifffile.imwrite(out_dir / f"{stem}_p{p}_q{q}_{args.blank_w}x{args.blank_h}_tsmin{args.min_tile}_tsmax{args.max_tile}_canvas.tif", results[0].astype("uint8"))
+    tifffile.imwrite(out_dir / f"{stem}_p{p}_q{q}_{W}x{H}_tile{tile_w}x{tile_h}_input.tif", cropped_map.astype("uint8"))
+    tifffile.imwrite(out_dir / f"{stem}_p{p}_q{q}_{W}x{H}_tile{tile_w}x{tile_h}_canvas.tif", results[0].astype("uint8"))
     if len(results) > 1:
-        tifffile.imwrite(out_dir / f"{stem}_p{p}_q{q}_{args.blank_w}x{args.blank_h}_tsmin{args.min_tile}_tsmax{args.max_tile}_output.tif", results[1].astype("uint8"))
+        tifffile.imwrite(out_dir / f"{stem}_p{p}_q{q}_{W}x{H}_tile{tile_w}x{tile_h}_output.tif", results[1].astype("uint8"))
     print(f"[saved] {len(results)} files" if len(results) > 1 else "")
 
 

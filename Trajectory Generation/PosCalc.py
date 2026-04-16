@@ -1,3 +1,14 @@
+"""
+Export stage coordinates (positions.ini) for Bruker ESPRIT SEM control software.
+
+Stage coordinates are in µm and follow the microscope convention: origin at
+the top-right corner of the map area. grid_x is NOT flipped here (unlike the
+visualisation in methods.place_tiles) because the microscope software already
+uses a top-right origin.
+
+Each position is the centre of the corresponding tile, computed as:
+    stage = (grid_index + 0.5) * tile_size_px * pixel_size_nm / 1000 + origin_µm
+"""
 from methods import *
 import configparser
 
@@ -29,8 +40,8 @@ for t in t_vals:
     x, y = billiard_knot(t, p, q)
     grid_x = int(x * num_tiles_x)
     grid_y = int(y * num_tiles_y)
-    stage_x = (grid_x * pixel_size * tile_width / 1000) + initial_x + 0.5 * tile_width
-    stage_y = (grid_y * pixel_size * tile_height / 1000) + initial_y + 0.5 * tile_height
+    stage_x = ((grid_x + 0.5) * tile_width * pixel_size / 1000) + initial_x
+    stage_y = ((grid_y + 0.5) * tile_height * pixel_size / 1000) + initial_y
     coordinates.append((stage_x, stage_y, z))
 
 config["Global"] = {"PositionCount": str(len(coordinates))}
