@@ -8,18 +8,18 @@
 # ============================================================
 
 GROUP_A_FILES <- c(
-  "path/to/dataset1a.RData",
-  "path/to/dataset1b.RData",
-  "path/to/dataset1c.RData"
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Kibo_Rdata/Kibo_Billiard_All.RData",
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Kibo_Rdata/Kibo_Raster_All.RData",
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Kibo_Rdata/Kibo_Spiral_Edges.RData"
 )
 GROUP_B_FILES <- c(
-  "path/to/dataset2a.RData",
-  "path/to/dataset2b.RData",
-  "path/to/dataset2c.RData"
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Kibo_Rdata/Kibo_Billiard_All.RData",
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Kibo_Rdata/Kibo_Raster_All.RData",
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Kibo_Rdata/Kibo_Spiral_Edges.RData"
 )
 
-GROUP_A_LABEL <- "C23-T2-1A"
-GROUP_B_LABEL <- "C23-S1-A"
+GROUP_A_LABEL <- "Kibo"
+GROUP_B_LABEL <- "Kibo"
 
 SAVE_FIGURE <- TRUE
 OUT_NAME    <- "BigBeautifulFigure.pdf"

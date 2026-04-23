@@ -46,13 +46,18 @@ def adjust_canvas_size(canvas, num_tiles_x, num_tiles_y):
     return adjusted_canvas, tile_width, tile_height
 
 
-def find_valid_tile_size(canvas_shape, min_tile_size, max_tile_size, initial_p, initial_q, maximize_reflections=True):
+def find_valid_tile_size(canvas_shape, min_tile_size, max_tile_size, initial_p, initial_q, maximize_reflections=True, search_window=40):
     """Search for a (p, q) pair and tile size that give full coverage.
 
     Iterates over (p, q) near (initial_p, initial_q) and checks whether the
     resulting grid fits within [min_tile_size, max_tile_size].  When
     *maximize_reflections* is True, higher (p, q) are tried first, yielding
     smaller tiles and a denser billiard path.
+
+    The search covers *search_window* integer values on either side of the
+    starting pair: for maximise_reflections=True the range is
+    (initial_p + search_window, initial_p]; otherwise
+    [initial_p, initial_p + search_window).
 
     Returns (tile_width, tile_height, num_tiles_x, num_tiles_y, p, q).
 
@@ -62,12 +67,12 @@ def find_valid_tile_size(canvas_shape, min_tile_size, max_tile_size, initial_p, 
 
     # Maximizing reflections (high p and q) will tend to smaller tile sizes and less spread of the billiard curves
     if maximize_reflections:
-        p_range = range(initial_p + 40, initial_p, -1)
-        q_range = range(initial_q + 40, initial_q, -1)
+        p_range = range(initial_p + search_window, initial_p, -1)
+        q_range = range(initial_q + search_window, initial_q, -1)
     # Minimizing reflections (low p and q)
     else:
-        p_range = range(initial_p, initial_p + 40, 1)
-        q_range = range(initial_q, initial_q + 40, 1)
+        p_range = range(initial_p, initial_p + search_window, 1)
+        q_range = range(initial_q, initial_q + search_window, 1)
 
     print('Finding p and q values!')
     for p in p_range:  # Test nearby p values

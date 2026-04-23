@@ -6,12 +6,13 @@
 # ============================================================
 
 # -------- user settings --------
-AGGREGATE_JSON    <- "path/to/file.json"   # Data produced by Python batch processing script
+AGGREGATE_JSON    <- "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/orders/kibo_spiral_edge_metrics.json"   # Data produced by Python batch processing script
 SAVE_PNG_COMBINED <- FALSE
-COMBINED_PNG_NAME <- "output.png"
+COMBINED_PNG_NAME <- "Kibo_Raster_All.png"
+
 
 # majors: if NULL, pick top-k per run by mean fraction
-major_elems  <- c("O","Si","Al","Fe","Ca","Mg","Na","K","Ti")   # set to NULL to auto-pick top-k
+major_elems  <- NULL   # set to NULL to auto-pick top-k
 k_majors     <- 10
 
 # EWMA + window params
@@ -318,8 +319,6 @@ p <- ggplot() +
   )
 
 print(p)
-
-COMBINED_PNG_NAME <- "C23S1A_SpiralCCW_edges.pdf"
 
 if (SAVE_PNG_COMBINED) {
   ggsave(COMBINED_PNG_NAME, p, width = 10, height = 5.8, dpi = 300)

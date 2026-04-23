@@ -67,6 +67,7 @@ def main():
     ap.add_argument("--p0", type=int, default=0, help="Initial p for search (required if searching).")
     ap.add_argument("--q0", type=int, default=0, help="Initial q for search (required if searching).")
     ap.add_argument("--maximize-reflections", action="store_true", help="Search higher p,q first (default off).")
+    ap.add_argument("--search-window", type=int, default=40, help="Integer window size around (p0,q0) to search (default 40).")
 
     # Placement / convergence
     ap.add_argument("--draw-path", action="store_true", help="Draw billiard path on canvas.")
@@ -131,7 +132,8 @@ def main():
             full_map.shape[0:2],
             args.min_tile, args.max_tile,
             args.p0, args.q0,
-            maximize_reflections=args.maximize_reflections
+            maximize_reflections=args.maximize_reflections,
+            search_window=args.search_window,
         )
         cropped_map, tile_w, tile_h = m.adjust_canvas_size(full_map, nx, ny)
 

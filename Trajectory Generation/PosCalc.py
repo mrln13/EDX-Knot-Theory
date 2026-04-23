@@ -8,6 +8,14 @@ uses a top-right origin.
 
 Each position is the centre of the corresponding tile, computed as:
     stage = (grid_index + 0.5) * tile_size_px * pixel_size_nm / 1000 + origin_µm
+
+NOTE — constants below are sample-specific and must be edited per acquisition.
+The defaults shown are for a test run and do not correspond to either dataset
+reported in the manuscript. Manuscript values:
+    Schist:  p=53, q=38, pixel_size=500 nm
+    Diorite: p=57, q=40, pixel_size=500 nm
+Stage origin (initial_x, initial_y) and z depend on the physical position of
+the sample in the SEM and must be set by the operator for each session.
 """
 from methods import *
 import configparser

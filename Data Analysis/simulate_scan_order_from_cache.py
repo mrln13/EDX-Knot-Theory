@@ -520,18 +520,18 @@ def main():
         for pl in tqdm(payloads, desc="Processing starts", unit="start"):
             out_path, prev_path = _worker_per_start(pl)
             if out_path:
-                print(f"[simulate] Wrote → {out_path}")
+                print(f"[simulate] Wrote -> {out_path}")
             if prev_path:
-                print(f"[preview] Saved → {prev_path}")
+                print(f"[preview] Saved -> {prev_path}")
     else:
         with ProcessPoolExecutor(max_workers=workers) as ex:
             futures = [ex.submit(_worker_per_start, pl) for pl in payloads]
             for fut in tqdm(as_completed(futures), total=len(futures), desc=f"Processing starts (x{workers})", unit="start"):
                 out_path, prev_path = fut.result()
                 if out_path:
-                    print(f"[simulate] Wrote → {out_path}")
+                    print(f"[simulate] Wrote -> {out_path}")
                 if prev_path:
-                    print(f"[preview] Saved → {prev_path}")
+                    print(f"[preview] Saved -> {prev_path}")
 
 if __name__ == "__main__":
     main()

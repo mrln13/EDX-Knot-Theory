@@ -102,7 +102,7 @@ def _merge_order_with_cache(order_df: pd.DataFrame, cache_df: pd.DataFrame) -> T
 # ----------------------- Main -----------------------
 
 def main():
-    ap = argparse.ArgumentParser(description="Batch analyze orders → single aggregate JSON of compositions.")
+    ap = argparse.ArgumentParser(description="Batch analyze orders -> single aggregate JSON of compositions.")
     ap.add_argument("--cache", required=True, help="semiquant_cache.parquet")
     ap.add_argument("--orders", nargs="+", required=True, help="glob or list of CSVs")
     ap.add_argument("--base-dir", type=str, default="", help="Prefer inputs here and write outputs here")
@@ -192,7 +192,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(aggregate, f)
-    print(f"[export] Wrote {len(runs)} runs → {out_path.as_posix()}")
+    print(f"[export] Wrote {len(runs)} runs -> {out_path.as_posix()}")
 
 if __name__ == "__main__":
     main()
