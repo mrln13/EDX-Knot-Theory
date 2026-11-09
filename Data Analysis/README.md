@@ -13,7 +13,16 @@ The workflow assumes **Bruker ESPRIT** `.BCF` files as inputs, using their embed
   Reads a **single aggregated JSON** (`{"runs":[...]}`) produced by Python and computes **EWMA–CLR convergence** statistics across many runs. It outputs a combined figure with min–max and P10–P90 ribbons, a median line, and a compact convergence‑steps histogram (no legend/titles).
 
 - **`plot.R`**  
-  Produces a **Big Beautiful Figure** (3×2 grid: A left, B right), stacking three rows with separate histogram scaling for the bottom row. Adds global left/right axis titles using `cowplot`, and shows per‑panel mean (solid) and ±1 SD (dashed) vertical lines.
+  Produces a **Big Beautiful Figure**: three rows (billiard, raster, spiral) and one to three dataset columns (groups A, B, C; `PLOT_GROUPS` selects which are drawn and loaded), with separate histogram scaling for the bottom row. Dataset names appear in a column strip on the top row and pattern names in a row strip on the right. Adds global left/right axis titles using `cowplot`, and shows per‑panel mean (solid) and ±1 SD (dashed) vertical lines. Uses one workspace per pattern.
+
+- **`plot_manuscript_pooled.R`**  
+  The manuscript's convergence figure: same layout as `plot.R`, but each pattern pools both scan orientations (row and column raster, clockwise and counter‑clockwise spiral, and the two billiard paths for `(p, q)`). Ribbons and histograms are rebuilt from per‑run data, every converged run is counted (no 300‑tile cut), and each column gets its own x‑range. Sources (`.RData` workspaces or aggregate JSONs) are listed in `SOURCES` at the top. Run from the repository root.
+
+- **`all_variants_stats.R`**  
+  Tiles‑to‑convergence statistics (runs, never converged, mean, SD, median, P10–P90) for every pattern and scan orientation, written to a CSV. Sources are listed in `jobs` at the top. Run from the repository root.
+
+- **`sensitivity_analysis.R`**  
+  Monte Carlo sensitivity analysis of the convergence hyperparameters on raster‑pattern aggregate JSONs.
 
 ### Python
 - **`analyze_orders.py`**  
@@ -22,8 +31,24 @@ The workflow assumes **Bruker ESPRIT** `.BCF` files as inputs, using their embed
 - **`build_composition_cache.py`**  
   Builds a **per‑tile composition cache** (`.parquet`) by pairing `.spx` and `.bcf` files using **scoped keys** derived from folder structure and `(i,j[rep])` tokens in filenames. Composition prefers quantified SPX %wt (fallback: BCF relative intensities). Stage X/Y always come from BCF and are used to compose a coarse grid. Quiet by default; logs only true mismatches or duplicates.
 
+- **`build_cache_from_grids.py`**  
+  Alternative to `build_composition_cache.py`: builds the same parquet cache from pre‑exported per‑element wt% CSV grids, with the tile grid derived from the billiard parameters `(p, q)`. Used for the granulite dataset.
+
 - **`simulate_scan_order_from_cache.py`**  
   Generates **scan orders** over a grid (raster/column/spiral/**billiard**) using only a composition cache or index. Supports many starts, previews, and parallel execution. Can emit `.csv` or `.txt` plus an arrow‑preview PNG.
+
+- **`fig_coverage_maps.py`**  
+  Draws the tiles visited before convergence (and up to the mean tiles‑to‑convergence) for one starting position on a BSE image, one panel per pattern (`--panel label:pattern:conv_step:mean`).
+
+- **`composite_maps.py`**  
+  PCA RGB composite of EDS element maps.
+
+- **`granulite_figures.py`**  
+  Granulite tile grid and billiard / raster / spiral paths on PCA RGB and greyscale backgrounds. Reads the granulite data folders and cache from the repository root and writes its PNGs there.
+
+### Subfolder
+- **`scan_orientation/`**  
+  Scripts and small result tables for the scan‑orientation analysis: the second billiard path for `(p, q)`, per‑start convergence steps for every pattern and orientation, the diorite directional‑similarity check, and a spatial block bootstrap. See [scan_orientation/README.md](scan_orientation/README.md).
 
 #### Helper modules
 
@@ -102,13 +127,20 @@ For multi-panel figures (see below) save the workspace.
 ### 5) Publication‑ready multi‑panel figure (R)
 Edit the file lists in `plot.R`:
 ```r
-GROUP_A_FILES <- c("path/to/dataset1a.RData", "path/to/dataset1b.RData", "path/to/dataset1c.RData")
-GROUP_B_FILES <- c("path/to/dataset2a.RData", "path/to/dataset2b.RData", "path/to/dataset2c.RData")
-OUT_NAME <- "BigBeautifulFigure.pdf"
+GROUP_A_FILES <- c("path/to/dataset1_billiard.RData", "path/to/dataset1_raster.RData", "path/to/dataset1_spiral.RData")
+GROUP_B_FILES <- c("path/to/dataset2_billiard.RData", "path/to/dataset2_raster.RData", "path/to/dataset2_spiral.RData")
+GROUP_C_FILES <- c("path/to/dataset3_billiard.RData", "path/to/dataset3_raster.RData", "path/to/dataset3_spiral.RData")
+GROUP_A_LABEL <- "Dataset 1"; GROUP_B_LABEL <- "Dataset 2"; GROUP_C_LABEL <- "Dataset 3"
+PLOT_GROUPS   <- c("A", "B", "C")   # any subset; the output name follows the labels
 ```
 Run:
 ```bash
 Rscript plot.R
+```
+
+For the manuscript version with both scan orientations pooled, list two sources per pattern in `SOURCES` at the top of `plot_manuscript_pooled.R` and run from the repository root:
+```bash
+Rscript "Data Analysis/plot_manuscript_pooled.R" convergence_figure.pdf
 ```
 
 ---

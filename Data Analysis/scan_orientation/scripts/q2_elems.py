@@ -1,5 +1,5 @@
 import numpy as np, pandas as pd
-S = "C:/Users/4029771/AppData/Local/Temp/claude/a3300fef5b34d016/dd33cf2e-2b67-4e1b-a664-322805f2111a/scratchpad/"
+S = str(__import__("pathlib").Path(__file__).resolve().parents[1]) + "/"  # scan_orientation/ (holds the *_cache.parquet files)
 MAJ = ["O", "Si", "Al", "Fe", "Ca", "Mg", "Na", "K", "Ti"]
 for name in ("diorite", "schist"):
     df = pd.read_parquet(S + f"{name}_cache.parquet")

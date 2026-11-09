@@ -24,7 +24,7 @@ from sklearn.preprocessing import StandardScaler
 # ---------------------------------------------------------------------------
 # Constants (Granulite-specific)
 # ---------------------------------------------------------------------------
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]  # repository root: data folders and outputs live there
 ELEM_DIR = ROOT / "Granulite_Element_Maps"
 CACHE = ROOT / "granulite_cache.parquet"
 PIXEL_UM = 3.0

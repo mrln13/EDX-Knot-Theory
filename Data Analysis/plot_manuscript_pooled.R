@@ -8,8 +8,8 @@
 #   (p, q) and its left-right mirror image), matching Table 1 of the manuscript.
 #   The second billiard path is the left-right mirror for the schist/diorite and
 #   the top-bottom mirror for the granulite (the other mirror image is the
-#   original path reversed). Runs come from Billiard_Mirror/*_billiard{mirror,flip}_dfall.RData
-#   (built by Billiard_Mirror/scripts/json_to_dfall.R; schist/diorite orders were
+#   original path reversed). Runs come from Data Analysis/scan_orientation/*_billiard{mirror,flip}_dfall.RData
+#   (built by Data Analysis/scan_orientation/scripts/json_to_dfall.R; schist/diorite orders were
 #   truncated at 600 tiles, beyond every convergence step and the plotted range).
 # - Ribbons and histograms are rebuilt from per-run data (df_all), not from
 #   the saved per-variant 'summ'/'conv_df', because quantiles cannot be pooled.
@@ -37,21 +37,21 @@ RP <- "../R_projects/EDX_SC_data_vis/"
 SOURCES <- list(
   Schist = list(
     Billiard = c(paste0(RP, "C23S1A/billiard_all_newparams.RData"),
-                 "Billiard_Mirror/schist_billiardmirror_dfall.RData"),
+                 "Data Analysis/scan_orientation/schist_billiardmirror_dfall.RData"),
     Raster   = c(paste0(RP, "C23S1A/Raster_snake_all_newparams.RData"),
                  paste0(RP, "C23S1A/column_snake_all_newparams.RData")),
     Spiral   = c(paste0(RP, "C23S1A/Spiral_CW_edges_newparams.RData"),
                  paste0(RP, "C23S1A/Spiral_CCW_edges_newparams.RData"))),
   Diorite = list(
     Billiard = c(paste0(RP, "C23T2-1A/Billiard_all_newparams.RData"),
-                 "Billiard_Mirror/diorite_billiardmirror_dfall.RData"),
+                 "Data Analysis/scan_orientation/diorite_billiardmirror_dfall.RData"),
     Raster   = c(paste0(RP, "C23T2-1A/Raster_snake_all_newparams.RData"),
                  paste0(RP, "C23T2-1A/Column_snake_all_newparams.RData")),
     Spiral   = c(paste0(RP, "C23T2-1A/Spiral_CW_edges_newparams.RData"),
                  paste0(RP, "C23T2-1A/Spiral_CCW_edges_newparams.RData"))),
   Granulite = list(
     Billiard = c("Granulite_Rdata/Granulite_Billiard_All_460.RData",
-                 "Billiard_Mirror/granulite_billiardflip_dfall.RData"),
+                 "Data Analysis/scan_orientation/granulite_billiardflip_dfall.RData"),
     Raster   = c("Granulite_Rdata/Granulite_Raster_All_460.RData",
                  "Granulite_Column_All/granulite_column_metrics.json"),
     Spiral   = c("Granulite_Rdata/Granulite_Spiral_Edges_460.RData",

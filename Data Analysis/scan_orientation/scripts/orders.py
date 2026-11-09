@@ -1,7 +1,9 @@
 """Write scan orders per start using simulate_scan_order_from_cache.py generators.
 
 usage: python orders.py CACHE PATTERN OUTDIR P Q N STARTS
-  PATTERN: billiard | billiardmirror | row | column
+  PATTERN: billiard | billiardmirror | billiardflip | row | column
+    billiardmirror = left-right mirror of the billiard path (second path for schist/diorite)
+    billiardflip   = top-bottom mirror of the billiard path (second path for the granulite)
   N: truncate each order to first N tiles (0 = full)
   STARTS: 'all' | 'sample:K' (K starts spread evenly over the grid) | 'r,c;r,c'
 """

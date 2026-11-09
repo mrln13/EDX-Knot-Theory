@@ -1,42 +1,30 @@
 # EDX-Knot-Theory
 
-This repository accompanies the paper **"Convergence-Guided EDS Mapping for Bulk Rock Composition Using Knot Theory"**.
+This repository accompanies the manuscript **"When to Stop Scanning: Convergence-Guided Trajectories for Efficient Compositional Mapping"** (in preparation).
 
 ## Overview
 
-We present an adaptive SEM–EDS mapping strategy that combines a deterministic
-billiard-knot tiling trajectory with a data-driven convergence criterion. The
-goal is to obtain representative bulk rock compositions from large-area EDS
-maps more efficiently, with fewer tiles and reduced beam time.
+An adaptive SEM–EDS mapping strategy that combines a deterministic
+billiard-knot tiling trajectory with a data-driven stopping rule, so that a
+representative bulk composition is obtained from a large-area EDS mosaic with
+fewer tiles and less beam time than a full map.
 
-### Abstract (from the manuscript)
+### Summary
 
-Bulk rock composition (BRC) controls phase equilibria, mineral stability and
-reconstructed pressure–temperature paths, but is traditionally obtained from
-destructive whole-rock analyses that lack spatial context. SEM–EDS mapping
-offers a route to BRC that preserves textural information, yet full thin-section
-maps are time-consuming and dose-intensive, and conventional raster scans can
-introduce grid-alignment bias.
+The approach has two parts. A billiard-knot trajectory visits every tile of a
+mosaic exactly once; it moves to a neighbouring tile at each step, but crosses
+the whole sample in long diagonal passes rather than filling it block by block.
+A stopping rule tracks the cumulative bulk composition in centred log-ratio
+(clr) space with an exponentially weighted moving average, and ends the
+acquisition once successive estimates stop changing.
 
-We present an adaptive SEM–EDS mapping strategy that combines a deterministic
-billiard-knot tiling trajectory with a data-driven convergence criterion. The
-stage follows a periodic billiard path that visits tile centres in a
-non-redundant, non-grid-aligned order, promoting uniform coverage and reducing
-sensitivity to sample fabric. We track the cumulative bulk composition in
-centred log-ratio (clr) space using an exponentially weighted moving average and
-monitor the clr-distance between successive states, terminating acquisition once
-this metric stabilizes.
-
-We test this approach on two contrasting rocks, a strongly foliated pelitic
-schist and a more equigranular diorite. Across both datasets, the billiard-knot
-trajectory reaches convergence in fewer tiles than raster and spiral patterns,
-reducing tiles-to-convergence by roughly 10–20%. Stable BRC estimates are
-obtained after only ~7.7% and ~5.5% of the available tiles in the schist and
-diorite mosaics, respectively, with tighter clustering of convergence steps
-across starting positions. These gains translate directly into reduced beam time
-for large-area EDS mapping. The combination of structured non-raster scan paths
-with a compositional convergence metric is broadly applicable to other spectral
-imaging and streaming compositional data.
+The code here generates the trajectories and exports stage positions, builds
+per-tile composition caches from acquired data, emulates billiard, raster and
+spiral scans from every starting position and in both scan orientations, and
+computes the convergence statistics and figures. It was applied to three
+thin-section mosaics: a foliated schist, an equigranular diorite, and a
+granulite whose compositional domains are comparable in size to the field of
+view.
 
 ---
 
@@ -69,16 +57,21 @@ install.packages(c("jsonlite","dplyr","tidyr","ggplot2","readr","purrr",
 | Script | Purpose | Manuscript link |
 |---|---|---|
 | `Trajectory Generation/methods.py` | Billiard-knot math, coverage check, tile-grid search | §Tiling Strategy |
-| `Trajectory Generation/ScanPatterns.py` | CLI wrapper to visualize/search trajectories | Fig. 1 |
+| `Trajectory Generation/ScanPatterns.py` | CLI wrapper to visualize/search trajectories | Scan-pattern figure |
 | `Trajectory Generation/PosCalc.py` | Export stage positions for Bruker ESPRIT | §Data Acquisition |
 | `Data Analysis/build_composition_cache.py` | Build per-tile composition cache from BCF/SPX files | §Data Acquisition |
 | `Data Analysis/build_cache_from_grids.py` | Build per-tile composition cache from pre-exported element-map CSV grids | alternative ingestion path |
 | `Data Analysis/simulate_scan_order_from_cache.py` | Generate scan orders (billiard/raster/spiral) over a cache | §Results |
 | `Data Analysis/analyze_orders.py` | Aggregate cumulative compositions per scan order into JSON | §Results |
 | `Data Analysis/Calc_Stats.R` | EWMA–CLR convergence statistics and ribbon plots | §Evaluating Data Convergence |
-| `Data Analysis/plot.R` | Publication-ready multi-panel convergence figure | Fig. 5 |
-| `Data Analysis/sensitivity_analysis.R` | Monte Carlo sensitivity analysis on convergence hyperparameters | §Sensitivity Analysis, Fig. 6 |
-| `Data Analysis/composite_maps.py` | PCA RGB composite of EDS element maps | Fig. 2b |
+| `Data Analysis/plot.R` | Multi-panel convergence figure (one to three dataset columns) from one workspace per pattern | earlier convergence figure |
+| `Data Analysis/plot_manuscript_pooled.R` | Convergence figure with every pattern pooled over both scan orientations | Convergence figure |
+| `Data Analysis/all_variants_stats.R` | Tiles-to-convergence statistics for every pattern and scan orientation | Summary table, appendix table |
+| `Data Analysis/fig_coverage_maps.py` | Tiles visited before convergence for one starting position, per pattern | Coverage-map figure |
+| `Data Analysis/granulite_figures.py` | Granulite tile grid and scan paths on PCA and greyscale backgrounds | Granulite figure |
+| `Data Analysis/scan_orientation/` | Second billiard path, per-start convergence steps, diorite fabric check, block bootstrap | §Results, §Discussion |
+| `Data Analysis/sensitivity_analysis.R` | Monte Carlo sensitivity analysis on convergence hyperparameters | §Sensitivity Analysis, sensitivity figure |
+| `Data Analysis/composite_maps.py` | PCA RGB composite of EDS element maps | PCA composite figure |
 | `Data Analysis/stitch.py` | BSE mosaic stitching (helper) | §Data Acquisition |
 | `Data Analysis/eds_map.py` | EDS cube / banded map utilities (helper) | — |
 
@@ -149,7 +142,11 @@ python "Data Analysis/simulate_scan_order_from_cache.py" \
   --starts-all --workers 8 \
   --out-template "orders/billiard_r{r}_c{c}.csv"
 ```
-Repeat with `--pattern raster --snake 1` and `--pattern spiral --starts-edges`.
+Repeat for both orientations of the conventional patterns:
+`--pattern raster --snake 1` and `--pattern column --snake 1` (with `--starts-all`),
+and `--pattern spiral --clockwise 1` and `--clockwise 0` (with `--starts-edges`).
+The second billiard path for the same `(p, q)` is written by
+`Data Analysis/scan_orientation/scripts/orders.py` (see the README there).
 
 Aggregate cumulative compositions:
 ```bash
@@ -167,12 +164,12 @@ Rscript "Data Analysis/Calc_Stats.R"
 
 ### Optional: reproduce remaining manuscript figures
 
-**PCA RGB composite (Fig. 2b):**
+**PCA RGB composite:**
 ```bash
 python "Data Analysis/composite_maps.py" --dir path/to/downsampled_element_maps
 ```
 
-**Sensitivity analysis (§Sensitivity Analysis, Fig. 6):**
+**Sensitivity analysis (§Sensitivity Analysis):**
 The analysis operates on raster-pattern aggregate JSONs. After generating
 metrics JSONs for the raster scans of both datasets, edit the `AGGREGATE_JSONS`
 paths at the top of the script and run:
@@ -180,11 +177,27 @@ paths at the top of the script and run:
 Rscript "Data Analysis/sensitivity_analysis.R"
 ```
 
-**Multi-panel figure (Fig. 5):**
-After running `Calc_Stats.R` for each dataset-pattern combination and saving
-the R workspaces, edit the file lists at the top of `plot.R` and run:
+**Convergence figure, both orientations pooled (as in the manuscript):**
+After saving a `Calc_Stats.R` workspace (or an `analyze_orders.py` JSON) for
+every dataset, pattern and orientation, edit `SOURCES` at the top of the
+script and run from the repository root:
 ```bash
-Rscript "Data Analysis/plot.R"
+Rscript "Data Analysis/plot_manuscript_pooled.R" convergence_figure.pdf
+```
+`plot.R` draws the same layout from one workspace per pattern (edit the file
+lists and `PLOT_GROUPS` at the top first).
+
+**Statistics for every pattern and orientation:**
+Edit the `jobs` list at the top of the script, then run from the repository root:
+```bash
+Rscript "Data Analysis/all_variants_stats.R" all_variants.csv
+```
+
+**Coverage maps for one starting position:**
+```bash
+python "Data Analysis/fig_coverage_maps.py" --bse path/to/BSE.png \
+  --rows 38 --cols 53 --p 38 --q 53 --start 0,52 \
+  --out-prefix coverage --panel a:billiard:111:125
 ```
 
 ---

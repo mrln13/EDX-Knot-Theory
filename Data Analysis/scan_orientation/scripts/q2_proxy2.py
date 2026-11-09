@@ -1,5 +1,5 @@
 import importlib.util, numpy as np, pandas as pd
-S = "C:/Users/4029771/AppData/Local/Temp/claude/a3300fef5b34d016/dd33cf2e-2b67-4e1b-a664-322805f2111a/scratchpad/"
+S = str(__import__("pathlib").Path(__file__).resolve().parents[1]) + "/"  # scan_orientation/ (holds the *_cache.parquet files)
 REPO = "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Data Analysis/"
 spec = importlib.util.spec_from_file_location("sim", REPO + "simulate_scan_order_from_cache.py")
 sim = importlib.util.module_from_spec(spec); spec.loader.exec_module(sim)
