@@ -6,9 +6,11 @@
 # ============================================================
 
 # -------- user settings --------
-AGGREGATE_JSON    <- "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/orders/kibo_spiral_edge_metrics.json"   # Data produced by Python batch processing script
+#AGGREGATE_JSON    <- "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Granulite_Billiard_All/granulite_metrics.json"  
+#AGGREGATE_JSON    <- "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Granulite_Raster_All/granulite_raster_metrics.json" 
+AGGREGATE_JSON    <- "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Granulite_Spiral_Edges/granulite_spiral_edge_metrics.json" 
 SAVE_PNG_COMBINED <- FALSE
-COMBINED_PNG_NAME <- "Kibo_Raster_All.png"
+COMBINED_PNG_NAME <- "Granulite_Spiral_Edges.png"
 
 
 # majors: if NULL, pick top-k per run by mean fraction

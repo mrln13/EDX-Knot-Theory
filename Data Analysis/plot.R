@@ -1,28 +1,51 @@
 # ============================================================
-# Big Beautiful Figure: 3 rows x 2 cols (A left, B right)
+# Big Beautiful Figure: 3 rows x (1, 2, or 3) cols
+# - Top column strip shows the dataset (set via GROUP_*_LABEL); on the other
+#   rows the strip space is preserved with transparent text for alignment
+# - Right-side row strip shows the pattern (Billiard / Raster / Spiral),
+#   placed between the panel and the secondary-axis tick labels
 # - Bottom row has its own histogram scale (fills HIST_MAX_FRAC)
 # - Global left y-axis title (cowplot)
 # - Global right y-axis title (cowplot) — shown ONCE
 # - Per-panel mean (solid) and mean±1 SD (dashed) lines
-# - Dataset name labels inside panels REMOVED
+# - Set PLOT_GROUPS to any subset of c("A","B","C") to render the
+#   corresponding columns left-to-right
 # ============================================================
 
-GROUP_A_FILES <- c(
-  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Kibo_Rdata/Kibo_Billiard_All.RData",
-  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Kibo_Rdata/Kibo_Raster_All.RData",
-  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Kibo_Rdata/Kibo_Spiral_Edges.RData"
-)
 GROUP_B_FILES <- c(
-  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Kibo_Rdata/Kibo_Billiard_All.RData",
-  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Kibo_Rdata/Kibo_Raster_All.RData",
-  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Kibo_Rdata/Kibo_Spiral_Edges.RData"
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/R_projects/EDX_SC_data_vis/C23S1A/Billiard_all_newparams.RData",
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/R_projects/EDX_SC_data_vis/C23S1A/Raster_snake_all_newparams.RData",
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/R_projects/EDX_SC_data_vis/C23S1A/Spiral_CCW_edges_newparams.RData"
+)
+GROUP_A_FILES <- c(
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/R_projects/EDX_SC_data_vis/C23T2-1A/Billiard_all_newparams.RData",
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/R_projects/EDX_SC_data_vis/C23T2-1A/Column_snake_all_newparams.RData",
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/R_projects/EDX_SC_data_vis/C23T2-1A/Spiral_CW_edges_newparams.RData"
+)
+GROUP_C_FILES <- c(
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Granulite_Rdata/Granulite_Billiard_All_460.RData",
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Granulite_Rdata/Granulite_Raster_All_460.RData",
+  "C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Granulite_Rdata/Granulite_Spiral_Edges_460.RData"
 )
 
-GROUP_A_LABEL <- "Kibo"
-GROUP_B_LABEL <- "Kibo"
+GROUP_B_LABEL <- "Schist"
+GROUP_A_LABEL <- "Diorite"
+GROUP_C_LABEL <- "Granulite"
+
+# Row labels — slot order matches the file order in GROUP_*_FILES above
+SLOT_LABELS <- c("1" = "Billiard", "2" = "Raster", "3" = "Spiral")
+
+# Which groups to plot. c("A","B") = both columns; "A" or "B" = single column.
+PLOT_GROUPS <- c("A", "B", "C")
 
 SAVE_FIGURE <- TRUE
-OUT_NAME    <- "BigBeautifulFigure.pdf"
+# Output name auto-built from PLOT_GROUPS — override below if you prefer.
+.label_for_group <- c(A = GROUP_A_LABEL, B = GROUP_B_LABEL, C = GROUP_C_LABEL)
+OUT_NAME <- paste0(
+  "BigBeautifulFigure_",
+  paste(.label_for_group[PLOT_GROUPS], collapse = "_"),
+  ".pdf"
+)
 
 # ----- display controls -----
 X_MAX     <- 300
@@ -73,11 +96,23 @@ load_group <- function(files, group_label) {
   list(summ = summ, conv = conv, order = order_tbl)
 }
 
-ga <- load_group(GROUP_A_FILES, "A")
-gb <- load_group(GROUP_B_FILES, "B")
+# Only load the groups we plan to plot, so single-group runs don't require
+# both groups' .RData files to exist.
+ga <- if ("A" %in% PLOT_GROUPS) load_group(GROUP_A_FILES, "A") else NULL
+gb <- if ("B" %in% PLOT_GROUPS) load_group(GROUP_B_FILES, "B") else NULL
+gc <- if ("C" %in% PLOT_GROUPS) load_group(GROUP_C_FILES, "C") else NULL
 
-summ_all <- bind_rows(ga$summ, gb$summ) %>% filter(step <= X_MAX)
-conv_all <- bind_rows(ga$conv, gb$conv) %>% filter(is.finite(conv_step), conv_step >= 0, conv_step <= X_MAX)
+summ_all <- bind_rows(
+  if (!is.null(ga)) ga$summ,
+  if (!is.null(gb)) gb$summ,
+  if (!is.null(gc)) gc$summ
+) %>% filter(step <= X_MAX)
+
+conv_all <- bind_rows(
+  if (!is.null(ga)) ga$conv,
+  if (!is.null(gb)) gb$conv,
+  if (!is.null(gc)) gc$conv
+) %>% filter(is.finite(conv_step), conv_step >= 0, conv_step <= X_MAX)
 
 # Ensure slot factor is 1..3 (top to bottom)
 slot_levels <- as.character(1:3)
@@ -154,12 +189,12 @@ stats_lines <- conv_plot %>%
   )
 
 # -------- function to build a single row plot with its own secondary axis --------
-make_row_plot <- function(slot_value, hist_rects, sec_axis_scale) {
+make_row_plot <- function(slot_value, hist_rects, sec_axis_scale, show_col_strip = FALSE) {
   # Filter data for this slot
   summ_row   <- summ_plot   %>% filter(slot == slot_value)
   rects_row  <- hist_rects  %>% filter(slot == slot_value)
   stats_row  <- stats_lines %>% filter(slot == slot_value)
-  
+
   ggplot() +
     # Histogram (filled + outline)
     geom_rect(
@@ -198,22 +233,36 @@ make_row_plot <- function(slot_value, hist_rects, sec_axis_scale) {
       sec.axis = sec_axis(~ . / sec_axis_scale, name = NULL)  # <- no per-row right title
     ) +
     labs(x = NULL) +
+    facet_grid(rows = vars(slot), cols = vars(group),
+               labeller = labeller(
+                 group = as_labeller(c(A = GROUP_A_LABEL, B = GROUP_B_LABEL, C = GROUP_C_LABEL)),
+                 slot  = as_labeller(SLOT_LABELS)
+               )) +
     theme_minimal(base_size = 12) +
     theme(
-      legend.position   = "none",
-      plot.margin       = margin(4, 12, 4, 12),
-      strip.text        = element_text(face = "bold"),
-      strip.background  = element_rect(fill = "grey95", color = NA),
-      axis.title.x      = element_text(margin = margin(t = 6))
-    ) +
-    facet_grid(cols = vars(group),
-               labeller = labeller(group = as_labeller(c(A = GROUP_A_LABEL, B = GROUP_B_LABEL))))
+      legend.position    = "none",
+      plot.margin        = margin(4, 12, 4, 12),
+      # Column strip (Kibo / Granulite): only show text on the top row,
+      # but keep the strip space on other rows so panels stay vertically aligned.
+      strip.text.x       = if (show_col_strip) element_text(face = "bold")
+                           else element_text(color = "transparent"),
+      strip.background.x = if (show_col_strip) element_rect(fill = "grey95", color = NA)
+                           else element_rect(fill = NA, color = NA),
+      # Row strip (Billiard / Raster / Spiral) on the right, vertical text,
+      # placed between the panel and the secondary-axis tick labels.
+      strip.text.y.right = element_text(face = "bold", angle = -90),
+      strip.background.y = element_rect(fill = "grey95", color = NA),
+      strip.placement    = "inside",
+      axis.title.x       = element_text(margin = margin(t = 6))
+    )
 }
 
 # Build the three row plots (top & middle share axis scale; bottom has its own)
-p_top    <- make_row_plot(slot_levels[1], hist_rects_topmid, upper_scale_y)
-p_middle <- make_row_plot(slot_levels[2], hist_rects_topmid, upper_scale_y)
-p_bottom <- make_row_plot(slot_levels[3], hist_rects_bottom, bottom_scale_y) + labs(x = "Tile (step)")
+# Only the top plot renders the column strip; middle and bottom keep the strip
+# space (transparent) so the three panel grids align vertically.
+p_top    <- make_row_plot(slot_levels[1], hist_rects_topmid, upper_scale_y, show_col_strip = TRUE)
+p_middle <- make_row_plot(slot_levels[2], hist_rects_topmid, upper_scale_y, show_col_strip = FALSE)
+p_bottom <- make_row_plot(slot_levels[3], hist_rects_bottom, bottom_scale_y, show_col_strip = FALSE) + labs(x = "Tile (step)")
 
 # Stack the rows (align widths)
 p_stack <- p_top / p_middle / p_bottom + plot_layout(heights = c(1,1,1))
@@ -232,7 +281,8 @@ p_final <- ggdraw() +
 print(p_final)
 
 if (SAVE_FIGURE) {
-  ggsave(OUT_NAME, p_final, width = 8.5, height = 7, dpi = 300)
+  fig_width <- c("1" = 5.0, "2" = 8.5, "3" = 12.0)[as.character(length(PLOT_GROUPS))]
+  ggsave(OUT_NAME, p_final, width = fig_width, height = 7, dpi = 300)
   cat("\nCombined plot saved:", file.path(getwd(), OUT_NAME), "\n")
 }
 
