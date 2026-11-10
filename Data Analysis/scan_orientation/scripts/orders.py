@@ -1,18 +1,24 @@
 """Write scan orders per start using simulate_scan_order_from_cache.py generators.
 
 usage: python orders.py CACHE PATTERN OUTDIR P Q N STARTS
-  PATTERN: billiard | billiardmirror | billiardflip | row | column
+  PATTERN: billiard | billiardmirror | billiardflip | row | column | spiralcw | spiralccw
     billiardmirror = left-right mirror of the billiard path (second path for schist/diorite)
     billiardflip   = top-bottom mirror of the billiard path (second path for the granulite)
+    row, column    = serpentine raster advancing row by row / column by column
+    spiralcw, spiralccw = inward spiral, clockwise / counter-clockwise
+  P, Q: billiard parameters (ignored by the other patterns)
   N: truncate each order to first N tiles (0 = full)
-  STARTS: 'all' | 'sample:K' (K starts spread evenly over the grid) | 'r,c;r,c'
+  STARTS: 'all' | 'edges' (every perimeter tile, as used for the spirals)
+          | 'sample:K' (K starts spread evenly over the grid) | 'r,c;r,c'
+
+Each order is the pattern's closed sequence rotated to begin at the start tile.
 """
 import importlib.util
 import sys
 from pathlib import Path
 
-REPO = Path(r"C:/Users/4029771/OneDrive - Universiteit Utrecht/Dev/EDX-Knot-Theory/Data Analysis")
-spec = importlib.util.spec_from_file_location("sim", REPO / "simulate_scan_order_from_cache.py")
+DATA_ANALYSIS = Path(__file__).resolve().parents[2]
+spec = importlib.util.spec_from_file_location("sim", DATA_ANALYSIS / "simulate_scan_order_from_cache.py")
 sim = importlib.util.module_from_spec(spec); spec.loader.exec_module(sim)
 
 cache, patt, outdir = sys.argv[1], sys.argv[2], Path(sys.argv[3])
@@ -36,11 +42,16 @@ elif patt == "row":
     canon = sim.order_raster_row(coords, None, snake=True)
 elif patt == "column":
     canon = sim.order_raster_col(coords, None, snake=True)
+elif patt in ("spiralcw", "spiralccw"):
+    canon = sim.order_spiral(coords, None, clockwise=(patt == "spiralcw"))
 else:
     raise SystemExit(patt)
+assert len(canon) == len(coords) and len(set(canon)) == len(coords), "order must visit every tile once"
 
 if starts_arg == "all":
     starts = coords
+elif starts_arg == "edges":
+    starts = sim.edge_starts(coords)
 elif starts_arg.startswith("sample:"):
     k = int(starts_arg.split(":")[1])
     starts = [coords[i] for i in range(0, len(coords), max(1, len(coords) // k))][:k]

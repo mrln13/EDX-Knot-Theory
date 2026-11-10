@@ -25,7 +25,7 @@ Large inputs are not in git: the per-tile caches
 
 | Script | Purpose |
 |---|---|
-| `orders.py` | Scan orders per start for `billiard`, `billiardmirror` (left-right mirror), `billiardflip` (top-bottom mirror), `row` or `column`, optionally truncated to the first N tiles |
+| `orders.py` | Scan orders per start for `billiard`, `billiardmirror` (left-right mirror), `billiardflip` (top-bottom mirror), `row`, `column`, `spiralcw` or `spiralccw`, from every tile, every perimeter tile (`edges`) or a list of starts, optionally truncated to the first N tiles |
 | `json_to_dfall.R` | Runs `Calc_Stats.R`'s `process_run` (lines 1-215, unchanged) on an `analyze_orders.py` JSON and saves a compact per-run workspace (`file, step, dist, conv_step`) for `plot_manuscript_pooled.R` |
 | `conv_from_json.R` | As above, but writes one convergence step per run to a CSV |
 | `cache_from_manifest.py` | Per-tile composition cache from a stitch manifest and quantified SPX files (avoids reading every BCF) |
@@ -48,6 +48,21 @@ python "Data Analysis/scan_orientation/scripts/orders.py" cache.parquet billiard
 python "Data Analysis/analyze_orders.py" --cache cache.parquet --orders "orders_mirror/*.csv" --out mirror.json
 Rscript "Data Analysis/scan_orientation/scripts/json_to_dfall.R" mirror.json mirror_dfall.RData fixed
 ```
+
+Cumulative-composition files published on Yoda (schist and diorite, six scan
+orders each). Billiard and raster orders start from every tile, spirals from
+every perimeter tile; all orders are full length. For the schist (use
+`diorite_cache.parquet`, 40 57 and `Diorite_` for the diorite):
+```bash
+DA="Data Analysis"; C="$DA/scan_orientation/schist_cache.parquet"
+for v in billiard:Billiard_path1:all billiardmirror:Billiard_path2:all row:Raster_row:all \
+         column:Raster_column:all spiralcw:Spiral_CW:edges spiralccw:Spiral_CCW:edges; do
+  IFS=: read pat name starts <<< "$v"
+  python "$DA/scan_orientation/scripts/orders.py" "$C" $pat orders_$pat 38 53 0 $starts
+  python "$DA/analyze_orders.py" --cache "$C" --orders "orders_$pat/*.csv" --out ../Schist_$name.json
+done
+```
+Each full-length billiard or raster file is about 3 GB.
 
 Block bootstrap over all sources of the convergence figure:
 ```bash
